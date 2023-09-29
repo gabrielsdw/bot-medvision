@@ -7,22 +7,20 @@ url = 'https://medvision-bebb0add5e3e.herokuapp.com/classificationApp'
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-commands = ['/start', '/help', '/classifier']
-
-
-
 def verificarDuplicidadeID(user_id, file:str='dados.txt') -> bool:
     user_id = str(user_id)
 
     lista_id = retornarDados()
     print(lista_id)
 
+
 def salvarDados(message, file : str='dados.txt'):
     user_id = str(message.chat.id)
     
     with open(file, "a") as arquivo:
         arquivo.write(str(user_id)+'\n')
-    
+
+
 def retornarDados(file: str='dados.txt'):
     with open(file, "r") as arquivo:
         for j in arquivo.readlines():
@@ -49,24 +47,12 @@ def start(message):
     msg1 = f"Olá, {message.from_user.first_name} seja bem-vindo ao MedVision!\n" 
     msg2 = "Para fazer diagnósticos basta enviar sua imagem.\n"
     msg3 = "Em caso de dúvidas digite: /help\n"
-    #msg4 = "Para ver todos os comandos digite:\n/commands"
-    
+        
     bot.send_message(user_id, msg1)
     bot.send_message(user_id, msg2)
     bot.send_message(user_id, msg3)
-    #bot.send_message(user_id, msg4)
     
 
-    
-"""
-@bot.message_handler(func=lambda message: True)
-def handle_unrecognized(message):
-    user_id = message.chat.id
-    msg = 'Comando inválido! Digite /help para ver a lista de comandos.'
-    print(message.text)
-    if message.text not in commands:
-        bot.send_message(user_id, msg)
-"""
 
 @bot.message_handler(commands=['help'])
 def help(message):
@@ -133,6 +119,7 @@ def team(message):
 @bot.message_handler(content_types=['photo'])
 def classifierImage(message):
     user_id = message.from_user.id
+
     try:
         file_id = message.photo[-1].file_id
             
