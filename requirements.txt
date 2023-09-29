@@ -1,2 +1,2 @@
 requests==2.30.0
-telebot==4.14.0
+telebot>=0.0.1
