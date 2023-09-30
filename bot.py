@@ -43,26 +43,28 @@ def post(url, file, existsCaption, caption):
     if not existsCaption:
         response = requests.post(url=url, files={'uploaded_file': file})
     else:
-        print(classes_index[caption][0], classes_index[caption][1])
-        a = {'uploaded_file': file, 'class_index': str(classes_index[caption][0]), 'class_name': str(classes_index[caption][1])}
-        response = requests.post(url=url_caption, files=a)
-    print(response.status_code)
-    if response.status_code == 200:
-        response = response.json()
-        if 'doenca' in response.keys():
-            return {
-                'cond': True,
-                'diagnostico': response['doenca'],
-                'tipoImagem': response['tipoImagem']
-            }
-        else:
-            return {
-                'cond': False,
-                'diagnostico': None,
-                'tipoImagem': response['tipoImagem']
-            }
+        file = {'uploaded_file': file}
+        form = {'class_index': classes_index[caption][0], 'class_name': str(classes_index[caption][1])}
+
+        response = requests.post(url=url_caption, files=file, data=form)
+
+    if response.status_code != 200:
+        print("API ERROR")
+        return
+    
+    response = response.json()
+    if 'doenca' in response.keys():
+        return {
+            'cond': True,
+            'diagnostico': response['doenca'],
+            'tipoImagem': response['tipoImagem']
+        }
     else:
-        print("API ERROR")    
+        return {
+            'cond': False,
+            'diagnostico': None,
+            'tipoImagem': response['tipoImagem']
+        }
 
 
 @bot.message_handler(content_types=['photo'])
@@ -79,17 +81,13 @@ def classifierImage(message):
         file_path = file_info.file_path
 
         downloaded_file = bot.download_file(file_path)
-        print(downloaded_file)
+
         caption = message.caption
         if existCaption:
-            print("existe caption")
             info = post(url=url_caption, file=downloaded_file, existsCaption=existCaption, caption=caption)
-            print(info)
         else:
-            print('não existe caption')
             info = post(url=url, file=downloaded_file, existsCaption=existCaption, caption=str())
-            print(info)
-        print(info)
+
         cond, diagnostico, tipoImagem = info['cond'], info['diagnostico'], info['tipoImagem']
 
         tipoImagem = traducao_orgaos[tipoImagem]
