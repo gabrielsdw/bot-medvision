@@ -116,6 +116,7 @@ def team(message):
     bot.send_message(user_id, msg_title)
     bot.send_message(user_id, msg_txt)
 
+
 @bot.message_handler(content_types=['photo'])
 def classifierImage(message):
     user_id = message.from_user.id
