@@ -1,18 +1,34 @@
 import telebot
 import requests
-import time
 
 BOT_TOKEN = '6510088960:AAFl7iSsgyTIhEqaBoFrG7n7LXQdh-urHhM'
 url = 'https://medvision-bebb0add5e3e.herokuapp.com/classificationApp'
+url_caption = 'https://medvision-bebb0add5e3e.herokuapp.com/classification-app-tag'
+
+traducao_orgaos = {
+    'Blood': 'Sangue',
+    'Brain MRI': 'Cérebro MRI',
+    'Chest CT': 'Pulmão CT',
+    'Chest XR': 'Pulmão RAIO-X',
+    'Knee MRI': 'Joelho MRI',
+    'Knee XR': 'Joelho RAIO-X',
+    'Liver MRI': 'Fígado MRI',
+    'Eye': 'Olho',
+    'Non medical image':'Imagem não médica'
+}
+
+classes_index = {
+    'Blood': [0, 'Blood'],
+    'Brain MRI': [1, 'Brain MRI'],
+    'Chest CT': [2, 'Chest CT'],
+    'Chest XR': [3, 'Chest XR'],
+    'Knee MRI': [4, 'Knee MRI'],
+    'Knee XR': [5, 'Knee XR'],
+    'Liver MRI': [6, 'Liver MRI'],
+    'Eye': [7, 'Eye']
+}
 
 bot = telebot.TeleBot(BOT_TOKEN)
-
-def verificarDuplicidadeID(user_id, file:str='dados.txt') -> bool:
-    user_id = str(user_id)
-
-    lista_id = retornarDados()
-    print(lista_id)
-
 
 def salvarDados(message, file : str='dados.txt'):
     user_id = str(message.chat.id)
@@ -21,28 +37,86 @@ def salvarDados(message, file : str='dados.txt'):
         arquivo.write(str(user_id)+'\n')
 
 
-def retornarDados(file: str='dados.txt'):
-    with open(file, "r") as arquivo:
-        for j in arquivo.readlines():
-            print(j)
-        return arquivo.readlines()
-
-
-def post(url, file):
-    response = requests.post(url, files={'uploaded_file': file})
+def post(url, file, existsCaption, caption):
+    print(caption)
+   
+    if not existsCaption:
+        response = requests.post(url=url, files={'uploaded_file': file})
+    else:
+        print(classes_index[caption][0], classes_index[caption][1])
+        a = {'uploaded_file': file, 'class_index': str(classes_index[caption][0]), 'class_name': str(classes_index[caption][1])}
+        response = requests.post(url=url_caption, files=a)
     print(response.status_code)
     if response.status_code == 200:
         response = response.json()
-        return response
+        if 'doenca' in response.keys():
+            return {
+                'cond': True,
+                'diagnostico': response['doenca'],
+                'tipoImagem': response['tipoImagem']
+            }
+        else:
+            return {
+                'cond': False,
+                'diagnostico': None,
+                'tipoImagem': response['tipoImagem']
+            }
     else:
-        print("API ERROR")
+        print("API ERROR")    
+
+
+@bot.message_handler(content_types=['photo'])
+def classifierImage(message):
+    user_id = message.from_user.id
+
+    existCaption = True if message.caption is not None else False
+
+    try:
+        file_id = message.photo[-1].file_id
+            
+        file_info = bot.get_file(file_id)
+            
+        file_path = file_info.file_path
+
+        downloaded_file = bot.download_file(file_path)
+        print(downloaded_file)
+        caption = message.caption
+        if existCaption:
+            print("existe caption")
+            info = post(url=url_caption, file=downloaded_file, existsCaption=existCaption, caption=caption)
+            print(info)
+        else:
+            print('não existe caption')
+            info = post(url=url, file=downloaded_file, existsCaption=existCaption, caption=str())
+            print(info)
+        print(info)
+        cond, diagnostico, tipoImagem = info['cond'], info['diagnostico'], info['tipoImagem']
+
+        tipoImagem = traducao_orgaos[tipoImagem]
+
+        if cond:
+            labels = organizarLabel(diagnostico=diagnostico) if diagnostico else " "
+            print(labels)
+            msg = f"Tipo da Imagem: {tipoImagem}\n\nDiagnóstico: \n{labels}"
+        else:
+            msg = f'Tipo da Imagem: {tipoImagem}\n\nInsira um tipo de imagem médica!\n\nPara dúvidas digite: /help'
+            
+        bot.reply_to(message, msg)
+    except Exception as e:
+        bot.reply_to(message, f"Erro ao processar a imagem: {str(e)}")
+
+
+def organizarLabel(diagnostico):
+    labels = ''
+    for diagnostico, probabilidade in diagnostico.values():
+        labels += f'{diagnostico}: {round(float(probabilidade))}%\n'
+    return labels
 
 
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.chat.id
     salvarDados(message=message, file='dados.txt')
-    verificarDuplicidadeID(user_id=user_id)
 
     msg1 = f"Olá, {message.from_user.first_name} seja bem-vindo ao MedVision!\n" 
     msg2 = "Para fazer diagnósticos basta enviar sua imagem.\n"
@@ -52,7 +126,6 @@ def start(message):
     bot.send_message(user_id, msg2)
     bot.send_message(user_id, msg3)
     
-
 
 @bot.message_handler(commands=['help'])
 def help(message):
@@ -82,12 +155,12 @@ def types(message):
     user_id = message.chat.id
 
     msg = 'Tipos de Imagens Atualmente Suportadas'
-    msg2 = '-Ressonância Magnética do Cérebro\n' + \
-           '-Ressonância Magnética do Joelho\n' + \
-           '-Ressonância Magnética do Fígado\n' + \
-           '-Raio-X do Pulmão\n' + \
-           '-Raio-X do Joelho\n' + \
-           '-Oftalmoscopia'
+    msg2 = 'Ressonância Magnética do Cérebro\n' + \
+           'Ressonância Magnética do Joelho\n' + \
+           'Ressonância Magnética do Fígado\n' + \
+           'Raio-X do Pulmão\n' + \
+           'Raio-X do Joelho\n' + \
+           'Oftalmoscopia'
 
     bot.send_message(user_id, msg)
     bot.send_message(user_id, msg2)
@@ -108,37 +181,13 @@ def team(message):
     user_id = message.chat.id
 
     msg_title =  "Equipe"
-    msg_txt = 'André Luiz França Batista\nLinktree: ' + \
-                '\n\n\nBruno Gomes Pereira\nLinktree: ' + \
+    msg_txt = 'André Luiz França Batista\nLinktree: https://linktr.ee/andre.batista' + \
+                '\n\n\nBruno Gomes Pereira\nLinktree: https://linktr.ee/brunaogomes' + \
                 '\n\n\nGabriel Oliveira Santos\nLinktree: https://linktr.ee/gabrielsdw' + \
-                '\n\n\nMatheus Ricardo de Jesus\nLinktree: https://linktr.ee/mathi.tar' + \
-                '\n\n\nJoão Pedro Araújo\nLinktree: '
+                '\n\n\n João Pedro Araujo\nLinktree: https://linktr.ee/joaopedroaqb' + \
+                '\n\n\n Matheus Ricardo de Jesus\nLinktree: https://linktr.ee/mathi.tar'
     bot.send_message(user_id, msg_title)
     bot.send_message(user_id, msg_txt)
-
-
-@bot.message_handler(content_types=['photo'])
-def classifierImage(message):
-    user_id = message.from_user.id
-
-    try:
-        file_id = message.photo[-1].file_id
-            
-        file_info = bot.get_file(file_id)
-            
-        file_path = file_info.file_path
-        downloaded_file = bot.download_file(file_path)
-
-        response = post(url=url, file=downloaded_file)
-        print(response)
-        if response['tipoImagem'] == 'Non medical image':
-            msg = f'Insira um tipo de imagem médica correspondente!'
-        else:
-            msg = f"Tipo da Imagem: {response['tipoImagem']} | Diagnóstico: {response['doenca']}"
-        
-        bot.reply_to(message, msg)
-    except Exception as e:
-        bot.reply_to(message, f"Erro ao processar a imagem: {str(e)}")
 
 
 if __name__ == '__main__':
