@@ -8,7 +8,7 @@ myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.m
 mydb = myclient['dados_bot']
 mycol = mydb["customers"]
 
-BOT_TOKEN = '6593632420:AAE5rn_BooVQ16Dzx4DNKXroiORpk0IKlhY'
+BOT_TOKEN = '6510088960:AAFl7iSsgyTIhEqaBoFrG7n7LXQdh-urHhM'
 
 url = 'https://medvision-bebb0add5e3e.herokuapp.com/classificationApp'
 url_caption = 'https://medvision-bebb0add5e3e.herokuapp.com/classification-app-tag'
