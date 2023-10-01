@@ -1,7 +1,15 @@
 import telebot
 import requests
+import pymongo as pg
+import datetime
 
-BOT_TOKEN = '6510088960:AAFl7iSsgyTIhEqaBoFrG7n7LXQdh-urHhM'
+myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.mongodb.net/")
+
+mydb = myclient['dados_bot']
+mycol = mydb["customers"]
+
+BOT_TOKEN = '6593632420:AAE5rn_BooVQ16Dzx4DNKXroiORpk0IKlhY'
+
 url = 'https://medvision-bebb0add5e3e.herokuapp.com/classificationApp'
 url_caption = 'https://medvision-bebb0add5e3e.herokuapp.com/classification-app-tag'
 
@@ -28,23 +36,26 @@ classes_index = {
     'Eye': [7, 'Eye']
 }
 
+captions = ['Brain MRI', 'Chest XR', 'Knee MRI', 'Knee XR', 'Liver MRI', 'Eye']
+
 bot = telebot.TeleBot(BOT_TOKEN)
 
-def salvarDados(message, file : str='dados.txt'):
-    user_id = str(message.chat.id)
+@bot.message_handler(commands=['caption'])
+def caption(message):
+    user_id = message.chat.id
     
-    with open(file, "a") as arquivo:
-        arquivo.write(str(user_id)+'\n')
+    msg1 = 'Em caso de erros do classificador geral você pode reenviar a imagem com uma legenda escrito o tipo correto da imagem.'
+    msg2 = 'Legendas disponíveis \n\nBrain MRI\nChest XR\nKnee MRI\nKnee XR\nLiver MRI\nEye'
+    bot.send_message(user_id, msg1)
+    bot.send_message(user_id, msg2)
 
 
 def post(url, file, existsCaption, caption):
-    print(caption)
-   
     if not existsCaption:
         response = requests.post(url=url, files={'uploaded_file': file})
     else:
         file = {'uploaded_file': file}
-        form = {'class_index': classes_index[caption][0], 'class_name': str(classes_index[caption][1])}
+        form = {'class_index': classes_index[caption][0], 'class_name': classes_index[caption][1]}
 
         response = requests.post(url=url_caption, files=file, data=form)
 
@@ -53,6 +64,7 @@ def post(url, file, existsCaption, caption):
         return
     
     response = response.json()
+
     if 'doenca' in response.keys():
         return {
             'cond': True,
@@ -62,15 +74,13 @@ def post(url, file, existsCaption, caption):
     else:
         return {
             'cond': False,
-            'diagnostico': None,
+            'diagnostico': False,
             'tipoImagem': response['tipoImagem']
         }
 
 
 @bot.message_handler(content_types=['photo'])
 def classifierImage(message):
-    user_id = message.from_user.id
-
     existCaption = True if message.caption is not None else False
 
     try:
@@ -83,7 +93,10 @@ def classifierImage(message):
         downloaded_file = bot.download_file(file_path)
 
         caption = message.caption
+
         if existCaption:
+            if caption not in captions:
+                caption = False
             info = post(url=url_caption, file=downloaded_file, existsCaption=existCaption, caption=caption)
         else:
             info = post(url=url, file=downloaded_file, existsCaption=existCaption, caption=str())
@@ -93,15 +106,35 @@ def classifierImage(message):
         tipoImagem = traducao_orgaos[tipoImagem]
 
         if cond:
-            labels = organizarLabel(diagnostico=diagnostico) if diagnostico else " "
-            print(labels)
-            msg = f"Tipo da Imagem: {tipoImagem}\n\nDiagnóstico: \n{labels}"
+            labels = organizarLabel(diagnostico=diagnostico)
+            
+            msg = 'Foi detectado uma imagem não médica ou que não é suportada pelo sistema.\n\nEnvie uma imagem válida.'
+            msg = f"Tipo da Imagem: {tipoImagem}\n\nDiagnóstico: \n{labels}" if diagnostico else msg
         else:
             msg = f'Tipo da Imagem: {tipoImagem}\n\nInsira um tipo de imagem médica!\n\nPara dúvidas digite: /help'
-            
+
         bot.reply_to(message, msg)
+
+        user_data = returnUserData(message, tipoImagem)
+        mycol.insert_one(user_data)
+        
     except Exception as e:
-        bot.reply_to(message, f"Erro ao processar a imagem: {str(e)}")
+        print(str(e))
+        bot.reply_to(message, 'Foi detectado uma imagem não médica ou que não é suportada pelo sistema.\nEnvie uma imagem válida') 
+
+
+def returnUserData(message, tipoImagem):
+    data_atual = str(datetime.datetime.now())
+    data, hora = data_atual.split()
+    hora = hora.split(".")[0]
+
+    user_data = {
+        'user_id': message.from_user.id,
+        'data': data,
+        'hora': hora,
+        'saida_cg': tipoImagem
+    }
+    return user_data
 
 
 def organizarLabel(diagnostico):
@@ -114,7 +147,6 @@ def organizarLabel(diagnostico):
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.chat.id
-    salvarDados(message=message, file='dados.txt')
 
     msg1 = f"Olá, {message.from_user.first_name} seja bem-vindo ao MedVision!\n" 
     msg2 = "Para fazer diagnósticos basta enviar sua imagem.\n"
@@ -133,7 +165,9 @@ def help(message):
                '/info - Mostra informações sobre o projeto\n'  + \
                '/team - Mostra meios de contato à equipe\n' + \
                '/types - Mostra os tipos de imagens suportadas\n' + \
-               '/cg - Mostra informações sobre o classificador geral'
+               '/cg - Mostra informações sobre o classificador geral\n' + \
+               '/caption - Ajusta erros do classificador geral'
+    
     bot.send_message(user_id, comandos)
 
 
@@ -146,6 +180,21 @@ def cg(message):
 
     bot.send_message(user_id, msg_title)
     bot.send_message(user_id, msg)
+
+
+@bot.message_handler(commands=['C0NS8LT_B4'])
+def consult_bd(message):
+    user_id = message.chat.id
+
+    qtdI = mycol.count_documents({})
+    qtdP = len(mycol.distinct('user_id'))
+
+    for x in mycol.find():
+        id, data, hora, saida_cg = x['user_id'], x['data'], x['hora'], x['saida_cg']
+        info = f'user_id: {id}, data: {data}, hora: {hora}, saida_cg: {saida_cg}'
+        bot.send_message(user_id, info)
+
+    bot.send_message(user_id, f'I: {qtdI} | P: {qtdP}')
 
 
 @bot.message_handler(commands=['types'])
@@ -182,8 +231,8 @@ def team(message):
     msg_txt = 'André Luiz França Batista\nLinktree: https://linktr.ee/andre.batista' + \
                 '\n\n\nBruno Gomes Pereira\nLinktree: https://linktr.ee/brunaogomes' + \
                 '\n\n\nGabriel Oliveira Santos\nLinktree: https://linktr.ee/gabrielsdw' + \
-                '\n\n\n João Pedro Araujo\nLinktree: https://linktr.ee/joaopedroaqb' + \
-                '\n\n\n Matheus Ricardo de Jesus\nLinktree: https://linktr.ee/mathi.tar'
+                '\n\n\nJoão Pedro Araujo\nLinktree: https://linktr.ee/joaopedroaqb' + \
+                '\n\n\nMatheus Ricardo de Jesus\nLinktree: https://linktr.ee/mathi.tar'
     bot.send_message(user_id, msg_title)
     bot.send_message(user_id, msg_txt)
 
