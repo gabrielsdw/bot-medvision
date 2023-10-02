@@ -10,35 +10,21 @@ myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.m
 mydb = myclient['dados_bot']
 mycol = mydb["customers"]
 
-BOT_TOKEN = '6510088960:AAFl7iSsgyTIhEqaBoFrG7n7LXQdh-urHhM'
+mycol_object = mydb["dados"]
+
+BOT_TOKEN = '6629004202:AAFrXnP9-s1B6PVNBddUV2SVRaNK4kMocgM'
 
 url = 'https://medvision-bebb0add5e3e.herokuapp.com/classificationApp'
 url_caption = 'https://medvision-bebb0add5e3e.herokuapp.com/classification-app-tag'
 
-traducao_orgaos = {
-    'Blood': 'Sangue',
-    'Brain MRI': 'Cérebro MRI',
-    'Chest CT': 'Pulmão CT',
-    'Chest XR': 'Pulmão RAIO-X',
-    'Knee MRI': 'Joelho MRI',
-    'Knee XR': 'Joelho RAIO-X',
-    'Liver MRI': 'Fígado MRI',
-    'Eye': 'Olho',
-    'Non medical image':'Imagem não médica'
-}
 
 classes_index = {
-    'Blood': [0, 'Blood'],
-    'Brain MRI': [1, 'Brain MRI'],
-    'Chest CT': [2, 'Chest CT'],
-    'Chest XR': [3, 'Chest XR'],
-    'Knee MRI': [4, 'Knee MRI'],
-    'Knee XR': [5, 'Knee XR'],
-    'Liver MRI': [6, 'Liver MRI'],
-    'Eye': [7, 'Eye']
+    'cerebromri': [1, 'Ressonância Magnética do Cérebro'],
+    'pulmaoraiox': [3, 'Raio-X do Pulmão'],
+    'joelhomri': [4, 'Ressonância Magnética do Joelho'],
+    'joelhoraiox': [5, 'Raio-X do Joelho'],
+    'oftalmoscopia': [7, 'Oftalmoscopia']
 }
-
-captions = ['Brain MRI', 'Chest XR', 'Knee MRI', 'Knee XR', 'Liver MRI', 'Eye']
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -47,7 +33,13 @@ def caption(message):
     user_id = message.chat.id
     
     msg1 = 'Em caso de erros do classificador geral você pode reenviar a imagem com uma legenda escrito o tipo correto da imagem.'
-    msg2 = 'Legendas disponíveis \n\nBrain MRI\nChest XR\nKnee MRI\nKnee XR\nLiver MRI\nEye'
+    msg2 = '''
+- Cerebro MRI
+- Pulmao RaioX
+- Joelho MRI
+- Joelho RaioX
+- Oftalmoscopia
+    '''
     bot.send_message(user_id, msg1)
     bot.send_message(user_id, msg2)
 
@@ -87,25 +79,27 @@ def classifierImage(message):
 
     try:
         file_id = message.photo[-1].file_id
-            
         file_info = bot.get_file(file_id)
-            
         file_path = file_info.file_path
-
         downloaded_file = bot.download_file(file_path)
-
         caption = message.caption
 
+        if caption:
+            caption = caption.lower().replace(' ', '').replace('-', '')
+            isCaptionValid = caption in classes_index.keys()
+
+            if not isCaptionValid:
+                caption_error_msg = f'A legenda {caption} não é válida. Consulta em /caption e digite corretamente'
+                bot.reply_to(message, caption_error_msg)
+                return
+            
+
         if existCaption:
-            if caption not in captions:
-                caption = False
             info = post(url=url_caption, file=downloaded_file, existsCaption=existCaption, caption=caption)
         else:
             info = post(url=url, file=downloaded_file, existsCaption=existCaption, caption=str())
 
         cond, diagnostico, tipoImagem = info['cond'], info['diagnostico'], info['tipoImagem']
-
-        tipoImagem = traducao_orgaos[tipoImagem]
 
         if cond:
             labels = organizarLabel(diagnostico=diagnostico)
@@ -117,6 +111,15 @@ def classifierImage(message):
 
         bot.reply_to(message, msg)
 
+        timezone = pytz.timezone('Etc/GMT+3')
+        current_time = datetime.datetime.now(timezone)
+
+        mycol_object.insert_one({
+            'user_id': message.from_user.id,
+            'date': current_time,
+            'image_type': tipoImagem
+        })
+
         user_data = returnUserData(message, tipoImagem)
         mycol.insert_one(user_data)
         
@@ -127,8 +130,7 @@ def classifierImage(message):
 
 def returnUserData(message, tipoImagem):
     timezone = pytz.timezone('Etc/GMT+3')
-    current_time = datetime.datetime.now(timezone)
-    data_atual = str(datetime.datetime.now())
+    data_atual = str(datetime.datetime.now(timezone))
     data, hora = data_atual.split()
     hora = hora.split(".")[0]
 
