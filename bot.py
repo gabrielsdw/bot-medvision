@@ -2,6 +2,8 @@ import telebot
 import requests
 import pymongo as pg
 import datetime
+import pytz
+
 
 myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.mongodb.net/")
 
@@ -124,6 +126,8 @@ def classifierImage(message):
 
 
 def returnUserData(message, tipoImagem):
+    timezone = pytz.timezone('Etc/GMT+3')
+    current_time = datetime.datetime.now(timezone)
     data_atual = str(datetime.datetime.now())
     data, hora = data_atual.split()
     hora = hora.split(".")[0]
