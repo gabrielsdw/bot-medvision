@@ -12,7 +12,7 @@ import pytz
 
 # mycol_object = mydb["dados"]
 
-BOT_TOKEN = '6629004202:AAFrXnP9-s1B6PVNBddUV2SVRaNK4kMocgM'
+BOT_TOKEN = '6510088960:AAFl7iSsgyTIhEqaBoFrG7n7LXQdh-urHhM'
 
 url = 'https://medvision-bebb0add5e3e.herokuapp.com/classificationApp'
 url_caption = 'https://medvision-bebb0add5e3e.herokuapp.com/classification-app-tag'
