@@ -1,16 +1,15 @@
 import telebot
 import requests
-# import pymongo as pg
+import pymongo as pg
 import datetime
 import pytz
 
 
-# myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.mongodb.net/")
+myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.mongodb.net/")
 
-# mydb = myclient['dados_bot']
-# mycol = mydb["customers"]
+mydb = myclient['dados_bot']
 
-# mycol_object = mydb["dados"]
+mycol_object = mydb["dados"]
 
 BOT_TOKEN = '6510088960:AAFl7iSsgyTIhEqaBoFrG7n7LXQdh-urHhM'
 
@@ -111,14 +110,14 @@ def classifierImage(message):
 
         bot.reply_to(message, msg)
 
-        # timezone = pytz.timezone('Etc/GMT+3')
-        # current_time = datetime.datetime.now(timezone)
+        timezone = pytz.timezone('Etc/GMT+3')
+        current_time = datetime.datetime.now(timezone)
 
-        # mycol_object.insert_one({
-        #     'user_id': message.from_user.id,
-        #     'date': current_time,
-        #     'image_type': tipoImagem
-        # })
+        mycol_object.insert_one({
+            'user_id': message.from_user.id,
+            'date': current_time,
+            'image_type': tipoImagem
+        })
 
         # user_data = returnUserData(message, tipoImagem)
         # mycol.insert_one(user_data)
@@ -128,19 +127,19 @@ def classifierImage(message):
         bot.reply_to(message, 'Foi detectado uma imagem não médica ou que não é suportada pelo sistema.\nEnvie uma imagem válida') 
 
 
-def returnUserData(message, tipoImagem):
-    timezone = pytz.timezone('Etc/GMT+3')
-    data_atual = str(datetime.datetime.now(timezone))
-    data, hora = data_atual.split()
-    hora = hora.split(".")[0]
+# def returnUserData(message, tipoImagem):
+#     timezone = pytz.timezone('Etc/GMT+3')
+#     data_atual = str(datetime.datetime.now(timezone))
+#     data, hora = data_atual.split()
+#     hora = hora.split(".")[0]
 
-    user_data = {
-        'user_id': message.from_user.id,
-        'data': data,
-        'hora': hora,
-        'saida_cg': tipoImagem
-    }
-    return user_data
+#     user_data = {
+#         'user_id': message.from_user.id,
+#         'data': data,
+#         'hora': hora,
+#         'saida_cg': tipoImagem
+#     }
+#     return user_data
 
 
 def organizarLabel(diagnostico):
@@ -188,19 +187,14 @@ def cg(message):
     bot.send_message(user_id, msg)
 
 
-# @bot.message_handler(commands=['C0NS8LT_B4'])
-# def consult_bd(message):
-#     user_id = message.chat.id
+@bot.message_handler(commands=['C0NS8LT_B4'])
+def consult_bd(message):
+    user_id = message.chat.id
 
-#     qtdI = mycol.count_documents({})
-#     qtdP = len(mycol.distinct('user_id'))
+    qtdI = mycol_object.count_documents({})
+    qtdP = len(mycol_object.distinct('user_id'))
 
-#     for x in mycol.find():
-#         id, data, hora, saida_cg = x['user_id'], x['data'], x['hora'], x['saida_cg']
-#         info = f'user_id: {id}, data: {data}, hora: {hora}, saida_cg: {saida_cg}'
-#         bot.send_message(user_id, info)
-
-#     bot.send_message(user_id, f'I: {qtdI} | P: {qtdP}')
+    bot.send_message(user_id, f'I: {qtdI} | P: {qtdP}')
 
 
 @bot.message_handler(commands=['types'])
@@ -210,7 +204,6 @@ def types(message):
     msg = 'Tipos de Imagens Atualmente Suportadas'
     msg2 = 'Ressonância Magnética do Cérebro\n' + \
            'Ressonância Magnética do Joelho\n' + \
-           'Ressonância Magnética do Fígado\n' + \
            'Raio-X do Pulmão\n' + \
            'Raio-X do Joelho\n' + \
            'Oftalmoscopia'
@@ -238,7 +231,8 @@ def team(message):
                 '\n\n\nBruno Gomes Pereira\nLinktree: https://linktr.ee/brunaogomes' + \
                 '\n\n\nGabriel Oliveira Santos\nLinktree: https://linktr.ee/gabrielsdw' + \
                 '\n\n\nJoão Pedro Araujo\nLinktree: https://linktr.ee/joaopedroaqb' + \
-                '\n\n\nMatheus Ricardo de Jesus\nLinktree: https://linktr.ee/mathi.tar'
+                '\n\n\nMatheus Ricardo de Jesus\nLinktree: https://linktr.ee/mathi.tar' + \
+                '\n\n\nE-mail de suporte\nprojetomedvision@gmail.com'
     bot.send_message(user_id, msg_title)
     bot.send_message(user_id, msg_txt)
 
