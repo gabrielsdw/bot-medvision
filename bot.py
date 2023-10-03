@@ -1,16 +1,16 @@
 import telebot
 import requests
-import pymongo as pg
+# import pymongo as pg
 import datetime
 import pytz
 
 
-myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.mongodb.net/")
+# myclient = pg.MongoClient("mongodb+srv://gabrielsdw:Adriano74@cluster0.xywxkos.mongodb.net/")
 
-mydb = myclient['dados_bot']
-mycol = mydb["customers"]
+# mydb = myclient['dados_bot']
+# mycol = mydb["customers"]
 
-mycol_object = mydb["dados"]
+# mycol_object = mydb["dados"]
 
 BOT_TOKEN = '6629004202:AAFrXnP9-s1B6PVNBddUV2SVRaNK4kMocgM'
 
@@ -111,17 +111,17 @@ def classifierImage(message):
 
         bot.reply_to(message, msg)
 
-        timezone = pytz.timezone('Etc/GMT+3')
-        current_time = datetime.datetime.now(timezone)
+        # timezone = pytz.timezone('Etc/GMT+3')
+        # current_time = datetime.datetime.now(timezone)
 
-        mycol_object.insert_one({
-            'user_id': message.from_user.id,
-            'date': current_time,
-            'image_type': tipoImagem
-        })
+        # mycol_object.insert_one({
+        #     'user_id': message.from_user.id,
+        #     'date': current_time,
+        #     'image_type': tipoImagem
+        # })
 
-        user_data = returnUserData(message, tipoImagem)
-        mycol.insert_one(user_data)
+        # user_data = returnUserData(message, tipoImagem)
+        # mycol.insert_one(user_data)
         
     except Exception as e:
         print(str(e))
@@ -188,19 +188,19 @@ def cg(message):
     bot.send_message(user_id, msg)
 
 
-@bot.message_handler(commands=['C0NS8LT_B4'])
-def consult_bd(message):
-    user_id = message.chat.id
+# @bot.message_handler(commands=['C0NS8LT_B4'])
+# def consult_bd(message):
+#     user_id = message.chat.id
 
-    qtdI = mycol.count_documents({})
-    qtdP = len(mycol.distinct('user_id'))
+#     qtdI = mycol.count_documents({})
+#     qtdP = len(mycol.distinct('user_id'))
 
-    for x in mycol.find():
-        id, data, hora, saida_cg = x['user_id'], x['data'], x['hora'], x['saida_cg']
-        info = f'user_id: {id}, data: {data}, hora: {hora}, saida_cg: {saida_cg}'
-        bot.send_message(user_id, info)
+#     for x in mycol.find():
+#         id, data, hora, saida_cg = x['user_id'], x['data'], x['hora'], x['saida_cg']
+#         info = f'user_id: {id}, data: {data}, hora: {hora}, saida_cg: {saida_cg}'
+#         bot.send_message(user_id, info)
 
-    bot.send_message(user_id, f'I: {qtdI} | P: {qtdP}')
+#     bot.send_message(user_id, f'I: {qtdI} | P: {qtdP}')
 
 
 @bot.message_handler(commands=['types'])
