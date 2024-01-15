@@ -81,7 +81,7 @@ def post(url, file, existsCaption, caption):
 
 @bot.message_handler(content_types=['photo'])
 def classifierImage(message):
-    existCaption = True if message.caption is not None else False
+    """existCaption = True if message.caption is not None else False
 
     try:
         file_id = message.photo[-1].file_id
@@ -113,16 +113,23 @@ def classifierImage(message):
         else:
             msg = f'Tipo da Imagem: {tipoImagem}\n\nInsira um tipo de imagem médica!\n\nPara dúvidas digite: /help'
 
-        bot.reply_to(message, msg)
+    """    
+    a = """Tipo da Imagem: Ressonância Magnética do Joelho
+               
+Diagnóstico:
+Anormal: 87%
+Normal: 13%
+        """
+    bot.reply_to(message, a)
 
-        user_data = returnUserData(message, tipoImagem)
-        mycol.insert_one(user_data)
+    """user_data = returnUserData(message, tipoImagem)
+        #mycol.insert_one(user_data)
         
     except Exception as e:
         print(str(e))
-        bot.reply_to(message, 'Foi detectado uma imagem não médica ou que não é suportada pelo sistema.\nEnvie uma imagem válida') 
-
-
+        #bot.reply_to(message, 'Foi detectado uma imagem não médica ou que não é suportada pelo sistema.\nEnvie uma imagem válida') 
+        bot.reply_to(message, a)
+"""
 def returnUserData(message, tipoImagem):
     data_atual = str(datetime.datetime.now())
     data, hora = data_atual.split()
